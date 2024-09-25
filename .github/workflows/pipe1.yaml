@@ -1,0 +1,44 @@
+name: Deploy .NET Core App
+
+on:
+  push:
+    branches:
+      - main  # Sadece main branch'e push edildiğinde deploy yap
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v3
+      with:
+        dotnet-version: '7.x'  # Projende kullanılan .NET Core versiyonu
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build the project
+      run: dotnet build --configuration Release
+
+    - name: Publish the project
+      run: dotnet publish --configuration Release --output ./publish
+
+    - name: Deploy to Server via SSH
+      uses: appleboy/ssh-action@v0.1.0
+      with:
+        host: ${{ secrets.HOST_IP }}  # Sunucu IP adresin
+        username: ${{ secrets.SERVER_USER }}  # SSH kullanıcı adı
+        password: ${{ secrets.SERVER_PASSWORD }}  # SSH şifresi (opsiyonel, SSH anahtarı kullanmayı tercih et)
+        port: 22  # SSH bağlantı portu
+        script: |
+          mkdir -p /var/www/helloworldapp
+          rm -rf /var/www/helloworldapp/*
+          cp -r ./publish/* /var/www/helloworldapp/
+          cd /var/www/helloworldapp
+          dotnet HelloWorldApp.dll
+
+
